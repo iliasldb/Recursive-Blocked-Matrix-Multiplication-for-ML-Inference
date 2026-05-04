@@ -1,8 +1,8 @@
 // ========================================================================================
 //     TEAM  INFO
-// Group member 1 name:
-// Group member 1 PID:
-// Group member 2 name:
+// Group member 1 name: Ilias Lahdab
+// Group member 1 PID: A18504845
+// Group member 2 name: Elisabeth Hsu
 // Group member 2 PID:
 // ========================================================================================
 
