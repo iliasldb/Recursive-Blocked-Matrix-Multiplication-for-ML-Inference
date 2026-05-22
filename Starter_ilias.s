@@ -106,6 +106,14 @@ baseMultiplyAdd:
         //  X0: The trace of the resulting n*n block of C.
 
         //YOUR CODE STARTS HERE
+        //Save the input parameters of getAddr in case they get overwritten
+        SUBI SP, SP, #32
+        STUR X5, [SP, #0]
+        STUR X6, [SP, #8]
+        STUR X7, [SP, #16]
+        STUR X8, [SP, #24] 
+
+
         ADDI X11, XZR, #0 //initialize i to 0
         row_iter:
         SUBS XZR, X11, X3 //compare i to n
@@ -158,7 +166,7 @@ baseMultiplyAdd:
         SUBI XZR, X11, X12 //compare i and j
         B.NE not_diagonal //if i != j, skip adding to trace
         ADD X0, X0, X13 //trace += SUM
-        
+
         not_diagonal:
         ADDI X12, X12, #1 //j++
         B col_iter //repeat for next j
@@ -166,6 +174,13 @@ baseMultiplyAdd:
         ADDI X11, X11, #1 //i++
         B row_iter //repeat for next i
         end_row_iter:
+        //reset the used registers for cleanliness
+        LDUR X5, [SP, #0]
+        LDUR X6, [SP, #8]
+        LDUR X7, [SP, #16]
+        LDUR X8, [SP, #24]
+        ADDI SP, SP, #32
+        
         BR LR //return trace in X0
 
         //YOUR CODE ENDS HERE
