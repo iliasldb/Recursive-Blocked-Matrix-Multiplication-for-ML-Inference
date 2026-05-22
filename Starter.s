@@ -72,7 +72,16 @@ getAddr:
         //   X5: The address of (pointer to) the desired element of the matrix.
 
         //YOUR CODE STARTS HERE
-
+                //row * stride
+        MUL X9, X8, X6
+        //row * stride + col    
+        ADD X9, X9, X7
+        //byte offset by 3 /same as multiplying by 8 for the long conversion
+        LSL X9, X9, #3
+        //add byte offset to base address
+        ADD X9, X5, X9
+        LDUR X10, [X9, #0] //load the value at the address into X5
+        BR X10 //return the value in X10
 
 
         //YOUR CODE ENDS HERE
