@@ -79,9 +79,8 @@ getAddr:
         //byte offset by 3 /same as multiplying by 8 for the long conversion
         LSL X9, X9, #3
         //add byte offset to base address
-        ADD X9, X5, X9
-        LDUR X10, [X9, #0] //load the value at the address into X5
-        BR X10 //return the value in X10
+        ADD X5, X5, X9
+        BR LR //return the address in X5
 
 
         //YOUR CODE ENDS HERE
@@ -107,6 +106,29 @@ baseMultiplyAdd:
         //  X0: The trace of the resulting n*n block of C.
 
         //YOUR CODE STARTS HERE
+        ADDI X11, XZR, #0 //initialize i to 0
+        row_iter:
+        SUBS XZR, X11, X3 //compare i to n
+        B.GE end_row_iter //if i >= n, end row iteration
+        ADDI X12, XZR, #0 //initialize j to 0
+        col_iter:
+        SUBS XZR, X12, X3 //compare j to n
+        B.GE end_col_iter //if j >= n, end column iteration
+        ADDI X13, XZR, #0 //initialize SUM TO zero
+        ADDI X14, XZR, #0 //initialize k to 0
+        k_iter:
+        SUBS XZR, X14, X3 //compare k to n
+        B.GE end_k_iter //if k >= n, end k iteration
+        //get A[i][k] by passing base address of A, i, k, and stride to getAddr
+        //needs to make sure to reset X5, X6, X7, and X8 for the getAddr function
+
+        ADD X5, XZR, X0 //base address of A
+        ADD X6, XZR, X11 //row i
+        ADD X7, XZR, X14 //col k
+        ADD X8, X4`, XZR //stride
+
+        BL getAddr // returns value in X5 of address of A[i][k]
+
 
 
         //YOUR CODE ENDS HERE
