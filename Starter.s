@@ -125,11 +125,48 @@ baseMultiplyAdd:
         ADD X5, XZR, X0 //base address of A
         ADD X6, XZR, X11 //row i
         ADD X7, XZR, X14 //col k
-        ADD X8, X4`, XZR //stride
+        ADD X8, X4, XZR //stride
 
         BL getAddr // returns value in X5 of address of A[i][k]
+        LDUR X15, [X5, #0] //load A[i][k] into X15
 
+        ADD X5, XZR, X1 //base address of B
+        ADD X6, XZR, X14 //row k
+        ADD X7, XZR, X12 //col j
+        ADD X8, X4, XZR //stride
+        BL getAddr // returns value in X5 of address of B[k][j]
+        LDUR X16, [X5, #0] //load B[k][j] into X16
 
+        //multiply A[i][k] and B[k][j] and add to SUM
+        MUL X17, X15, X16 //A[i][k] * B[k][j]
+        ADD X13, X13, X17 //SUM += A[i][k] * B[k][j]
+        ADDI X14, X14, #1 //k++
+        B k_iter //repeat for next k
+
+        end_k_iter:
+        //store SUM in C[i][j] by passing base address of C, i, j, and stride to getAddr
+        ADD X5, XZR, X2 //base address of C
+        ADD X6, XZR, X11 //row i
+        ADD X7, XZR, X12 //col j
+        ADD X8, X4, XZR //stride
+        BL getAddr // returns value in X5 of address of C[i][j]
+
+        LDUR X18, [X5, #0] //load current value of C[i][j] into X18
+        ADD X18, X18, X13 //C[i][j] += SUM
+        STUR X18, [X5, #0] //store new value of C[i][j]
+        //if i == j, add SUM to trace
+        SUBI XZR, X11, X12 //compare i and j
+        B.NE not_diagonal //if i != j, skip adding to trace
+        ADD X0, X0, X13 //trace += SUM
+        
+        not_diagonal:
+        ADDI X12, X12, #1 //j++
+        B col_iter //repeat for next j
+        end_col_iter:
+        ADDI X11, X11, #1 //i++
+        B row_iter //repeat for next i
+        end_row_iter:
+        BR LR //return trace in X0
 
         //YOUR CODE ENDS HERE
 
