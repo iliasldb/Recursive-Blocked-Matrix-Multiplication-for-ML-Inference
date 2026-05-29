@@ -204,14 +204,35 @@ splitOffset:
         //   Output:
         //   X8: The address of (pointer to) the desired submatrix.
 
+        //  Other Registers:
+	//  X9: Half of n
+	//  X10: Half*stride
+
 
         //YOUR CODE STARTS HERE
+	
+	LSR X9, X1, #1 // Divide n by 2
+	ADD X8, X0, XZR // base
 
+	SUBS XZR, X2, XZR // branch to return if quadrant == 0
+	B.LE return
 
+	ADD X8, X0, X9 // base + half
+	
+	SUBIS XZR, X2, #1 // branch to return if quadrant == 1
+	B.LE return
 
+	MUL X10, X9, X3 // half*stride
+	ADD X8, X0, X10 // base + half*stride
+
+	SUBIS XZR, X2, #2 // branch to return if quadrant == 2
+	B.LE return
+
+	ADD X8, X8, X9 // base + half*stride + half
+	
+	return: 
+	BR LR	// branch to back where function was called
         //YOUR CODE ENDS HERE
-
-
 
 
 
