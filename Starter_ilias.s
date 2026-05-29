@@ -254,6 +254,8 @@ recBlockMul:
         //  X0: sum of traces of all diagonal base-case blocks
 
         //YOUR CODE STARTS HERE
+
+        //if statement
         SUBS XZR, X3, X4
         B.GT skip //if n <= base, do base case multiplication
         //make sure that the parameters for the basemultiplyAdd function are correct before calling it
@@ -271,7 +273,23 @@ recBlockMul:
         ADDI SP, SP, #8
 
         skip: 
-        
+        ADD X11, XZR, XZR //initialize sum of traces to 0
+        ADD X12, XZR, XZR //initialize sum of traces to 0
+        //iterate through the 4 quadrants
+        SUBI SP, SP, #32
+        STUR X0, [SP, #0] //save A
+        STUR X1, [SP, #8] //save B
+        STUR X2, [SP, #16] //save C
+        STUR X3, [SP, #24] //save n
+        STUR X4, [SP, #32] //save base
+        matrix loop:
+
+        loop:
+        SUBI X11, XZR, #4 //compare i to 4
+        B.GE end_loop //if i >= 4, end loop
+        ADD X0, 
+        end_loop:
+
 
 
 
