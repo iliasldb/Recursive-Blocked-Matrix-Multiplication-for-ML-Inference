@@ -254,6 +254,26 @@ recBlockMul:
         //  X0: sum of traces of all diagonal base-case blocks
 
         //YOUR CODE STARTS HERE
+        SUBS XZR, X3, X4
+        B.GT skip //if n <= base, do base case multiplication
+        //make sure that the parameters for the basemultiplyAdd function are correct before calling it
+        //X4 should have the row stride for the call X5
+        //Save current value of X4 in stack
+        SUBI SP, SP, #8
+        STUR X4, [SP, #0]
+
+        ADD X4, X5, XZR //set X4 to stride
+
+        BL baseMultiplyAdd //else, do base case multiplication for the current block and add to trace
+        //reset X4 to the original value
+        LDUR X4, [SP, #0]
+        //reset stack pointer
+        ADDI SP, SP, #8
+
+        skip: 
+        
+
+
 
 
 
