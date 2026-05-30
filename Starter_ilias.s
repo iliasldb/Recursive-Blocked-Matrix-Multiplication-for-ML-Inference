@@ -3,7 +3,7 @@
 // Group member 1 name: Ilias Lahdab
 // Group member 1 PID: A18504845
 // Group member 2 name: Elisabeth Hsu
-// Group member 2 PID:
+// Group member 2 PID: A17338370
 // ========================================================================================
 
 // ========================================================================================
@@ -210,22 +210,25 @@ splitOffset:
 	
 	LSR X9, X1, #1 // Divide n by 2
 	ADD X8, X0, XZR // base
-
 	SUBS XZR, X2, XZR // branch to return if quadrant == 0
 	B.LE return
 
-	ADD X8, X0, X9 // base + half
-	
-	SUBIS XZR, X2, #1 // branch to return if quadrant == 1
+        //quadrant 1: base + half
+        LSL X11, X9, #3 // half * 8 for byte offset
+        ADD X8, X0, X11 // base + half
+        SUBIS XZR, X2, #1 // branch to return if quadrant == 1
 	B.LE return
 
-	MUL X10, X9, X3 // half*stride
-	ADD X8, X0, X10 // base + half*stride
 
+        //quadrant 2: base + half*stride
+	MUL X10, X9, X3 // half*stride
+        LSL X10, X10, #3 // half*stride * 8 for byte offset
+	ADD X8, X0, X10 // base + half*stride
 	SUBIS XZR, X2, #2 // branch to return if quadrant == 2
 	B.LE return
 
-	ADD X8, X8, X9 // base + half*stride + half
+        //quadrant 3: base + half*stride + half
+	ADD X8, X8, X11 // base + half*stride + half
 	
 	return: 
 	BR LR	// branch to back where function was called
