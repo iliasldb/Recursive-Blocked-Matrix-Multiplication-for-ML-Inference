@@ -85,10 +85,6 @@ getAddr:
 
         //YOUR CODE ENDS HERE
 
-
-
-
-
 ////////////////////////////////
 //                            //
 //       baseMultiplyAdd      //
@@ -106,24 +102,26 @@ baseMultiplyAdd:
         //  X0: The trace of the resulting n*n block of C.
 
         //YOUR CODE STARTS HERE
-        //Save the input parameters of getAddr in case they get overwritten
-        SUBI SP, SP, #32
-        STUR X5, [SP, #0]
-        STUR X6, [SP, #8]
-        STUR X7, [SP, #16]
-        STUR X8, [SP, #24] 
+        SUBI SP, SP, #16 //allocate stack space for saving registers
+        STUR LR, [SP, #0] //save LR
+        STUR X19, [SP, #8] //save X19 trace register
 
-
+        ADDI X19, XZR, #0 //initialize trace to 0
         ADDI X11, XZR, #0 //initialize i to 0
+
         row_iter:
         SUBS XZR, X11, X3 //compare i to n
         B.GE end_row_iter //if i >= n, end row iteration
+
         ADDI X12, XZR, #0 //initialize j to 0
+
         col_iter:
         SUBS XZR, X12, X3 //compare j to n
         B.GE end_col_iter //if j >= n, end column iteration
+
         ADDI X13, XZR, #0 //initialize SUM TO zero
         ADDI X14, XZR, #0 //initialize k to 0
+
         k_iter:
         SUBS XZR, X14, X3 //compare k to n
         B.GE end_k_iter //if k >= n, end k iteration
@@ -162,31 +160,30 @@ baseMultiplyAdd:
         LDUR X18, [X5, #0] //load current value of C[i][j] into X18
         ADD X18, X18, X13 //C[i][j] += SUM
         STUR X18, [X5, #0] //store new value of C[i][j]
-        //if i == j, add SUM to trace
-        SUBI XZR, X11, X12 //compare i and j
-        B.NE not_diagonal //if i != j, skip adding to trace
-        ADD X0, X0, X13 //trace += SUM
 
-        not_diagonal:
         ADDI X12, X12, #1 //j++
         B col_iter //repeat for next j
         end_col_iter:
+        //t += C[i][i] by passing base address of C, i, i, and stride to getAddr
+        ADD X5, XZR, X2 //base address of C
+        ADD X6, XZR, X11 //row i
+        ADD X7, XZR, X11 //col i
+        ADD X8, X4, XZR //stride
+        BL getAddr // returns value in X5 of address of C[i][i]
+        LDUR X20, [X5, #0] //load C[i][i] into X20
+        ADD X19, X19, X20 //trace += C[i][i]
+
         ADDI X11, X11, #1 //i++
         B row_iter //repeat for next i
-        end_row_iter:
-        //reset the used registers for cleanliness
-        LDUR X5, [SP, #0]
-        LDUR X6, [SP, #8]
-        LDUR X7, [SP, #16]
-        LDUR X8, [SP, #24]
-        ADDI SP, SP, #32
-        
+
+        end_row_iter: 
+        ADD X0, XZR, X19 //move trace into X0 for return value
+        LDUR LR, [SP, #0] //restore LR
+        LDUR X19, [SP, #8] //restore X19
+        ADDI SP, SP, #16 //deallocate stack space
         BR LR //return trace in X0
 
         //YOUR CODE ENDS HERE
-
-
-
 
 
 ////////////////////////////////
@@ -323,7 +320,7 @@ recBlockMul:
 
 
 
-        
+
         //reset the used registers for cleanliness
 //Again need to check where SP is actually pointing
         LDUR X0, [SP, #0] //restore A
