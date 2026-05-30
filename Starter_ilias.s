@@ -273,25 +273,65 @@ recBlockMul:
         ADDI SP, SP, #8
 
         skip: 
-        ADD X11, XZR, XZR //initialize sum of traces to 0
-        ADD X12, XZR, XZR //initialize sum of traces to 0
-        //iterate through the 4 quadrants
+        ADD X11, XZR, XZR //initialize i to 0
+        ADD X12, XZR, XZR//initialize j to 0 (j =0 for A, then j= 1 for B, then j = 2 for C in the recursive calls)
+        ADD X13, XZR, XZR //initialize k to 0 (keeps track of the stack used for the adresses)
+        
         SUBI SP, SP, #32
         STUR X0, [SP, #0] //save A
         STUR X1, [SP, #8] //save B
         STUR X2, [SP, #16] //save C
         STUR X3, [SP, #24] //save n
         STUR X4, [SP, #32] //save base
-        matrix loop:
 
         loop:
         SUBI X11, XZR, #4 //compare i to 4
         B.GE end_loop //if i >= 4, end loop
-        ADD X0, 
+        ADD X0, XZR, X0 //reset A
+        ADD X1, XZR, X3 // block size n
+        ADD X2, XZR, X11 // block number 0-3
+        ADD X3, XZR, X5 // stride
+        BL splitOffset //get the offset for the current block 
+        SUBI SP, SP, #8
+        STUR X8, [SP, #0] //save offset
+        ADDI X13, X13, #1 //increment k for stack used
+        ADDI X11, X11, #1 // I++
+        B loop //repeat for next quadrant
+
         end_loop:
+        ADDI X12, X12, #1 //j++
+        //update X0 to the next block
+//FOr future reference:
+        //not sure about how to access the value store in stack (need to check where SP is pointing)
+        SUBIS XZR, X12, #1 //compare j to 1
+        B.NE two
+        LDUR X0, [SP, #8] //load B
+        ADD X11, XZR, XZR //reset i to 0
+        B loop
+        two:
+        SUBIS XZR, X12, #2 //compare j to 2
+        B.NE default
+        LDUR X0, [SP, #16] //load C
+        ADD X11, XZR, XZR //reset i to 0
+        B loop
+        default:
+        //if j > 2, we are done with all the recursive calls and can exit the loop
+
+        ADD X14, XZR, XZR //set trace to 0
 
 
 
+
+
+        
+        //reset the used registers for cleanliness
+//Again need to check where SP is actually pointing
+        LDUR X0, [SP, #0] //restore A
+        LDUR X1, [SP, #8] //restore B
+        LDUR X2, [SP, #16] //restore C
+        LDUR X3, [SP, #24] //restore n
+        LDUR X4, [SP, #32] //restore base
+        ADDI SP, SP, #32
 
 
 
