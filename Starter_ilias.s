@@ -102,9 +102,10 @@ baseMultiplyAdd:
         //  X0: The trace of the resulting n*n block of C.
 
         //YOUR CODE STARTS HERE
-        SUBI SP, SP, #16 //allocate stack space for saving registers
+        SUBI SP, SP, #24 //allocate stack space for saving registers
         STUR LR, [SP, #0] //save LR
         STUR X19, [SP, #8] //save X19 trace register
+        STUR X20, [SP, #16] //save X20 (n/2)
 
         ADDI X19, XZR, #0 //initialize trace to 0
         ADDI X11, XZR, #0 //initialize i to 0
@@ -180,7 +181,9 @@ baseMultiplyAdd:
         ADD X0, XZR, X19 //move trace into X0 for return value
         LDUR LR, [SP, #0] //restore LR
         LDUR X19, [SP, #8] //restore X19
-        ADDI SP, SP, #16 //deallocate stack space
+        LDUR X20, [SP, #16] //restore X20
+        ADDI SP, SP, #24 //deallocate stack space
+
         BR LR //return trace in X0
 
         //YOUR CODE ENDS HERE
@@ -257,89 +260,204 @@ recBlockMul:
 
         //if statement
         SUBS XZR, X3, X4
-        B.GT skip //if n <= base, do base case multiplication
+        B.GT recurse //if n <= base, do base case multiplication
         //make sure that the parameters for the basemultiplyAdd function are correct before calling it
         //X4 should have the row stride for the call X5
-        //Save current value of X4 in stack
-        SUBI SP, SP, #8
-        STUR X4, [SP, #0]
-
         ADD X4, X5, XZR //set X4 to stride
+        B baseMultiplyAdd //else, do base case multiplication for the current block and add to trace
 
-        BL baseMultiplyAdd //else, do base case multiplication for the current block and add to trace
-        //reset X4 to the original value
-        LDUR X4, [SP, #0]
-        //reset stack pointer
-        ADDI SP, SP, #8
+        recurse: 
+        // Save LR + calle state, reserve room for 12 pointers and the trace
+        //0: LR
+        //8: trace X19
+        //16: n/2 X20
+        //24: base X21
+        //32: stride X22
+        //40: A 
+        //48: B
+        //56: C
+        //64-160: space for 12 pointers for recursive calls A11, A12, A21, A22, B11, B12, B21, B22, C11, C12, C21, C22
 
-        skip: 
-        ADD X11, XZR, XZR //initialize i to 0
-        ADD X12, XZR, XZR//initialize j to 0 (j =0 for A, then j= 1 for B, then j = 2 for C in the recursive calls)
-        ADD X13, XZR, XZR //initialize k to 0 (keeps track of the stack used for the adresses)
-        
-        SUBI SP, SP, #32
-        STUR X0, [SP, #0] //save A
-        STUR X1, [SP, #8] //save B
-        STUR X2, [SP, #16] //save C
-        STUR X3, [SP, #24] //save n
-        STUR X4, [SP, #32] //save base
+        SUBI SP, SP, #160
+        STUR LR, [SP, #0] //save LR
+        STUR X19, [SP, #8] //save trace
+        STUR X20, [SP, #16] //save n/2 
+        STUR X21, [SP, #24] //save base
+        STUR X22, [SP, #32] //save stride
 
-        loop:
-        SUBI X11, XZR, #4 //compare i to 4
-        B.GE end_loop //if i >= 4, end loop
-        ADD X0, XZR, X0 //reset A
+        ADDI X19, XZR, #0 //initialize trace to 0
+        LSR X20, X3, #1 // n/2
+        ADD X21, XZR, X4 // base
+        ADD X22, XZR, X5 // stride
+
+        STUR X0, [SP, #40] //save A
+        STUR X1, [SP, #48] //save B
+        STUR X2, [SP, #56] //save C
+
+        // A11, A12, A21, A22
+        ADD X0, XZR, X0 //PTR A
         ADD X1, XZR, X3 // block size n
-        ADD X2, XZR, X11 // block number 0-3
+        ADD X2, XZR, XZR //block number 0 for A11
         ADD X3, XZR, X5 // stride
-        BL splitOffset //get the offset for the current block 
-        SUBI SP, SP, #8
-        STUR X8, [SP, #0] //save offset
-        ADDI X13, X13, #1 //increment k for stack used
-        ADDI X11, X11, #1 // I++
-        B loop //repeat for next quadrant
+        BL splitOffset //get the offset for A11
+        STUR X8, [SP, #64] //save A11
 
-        end_loop:
-        ADDI X12, X12, #1 //j++
-        //update X0 to the next block
-//FOr future reference:
-        //not sure about how to access the value store in stack (need to check where SP is pointing)
-        SUBIS XZR, X12, #1 //compare j to 1
-        B.NE two
-        LDUR X0, [SP, #8] //load B
-        ADD X11, XZR, XZR //reset i to 0
-        B loop
-        two:
-        SUBIS XZR, X12, #2 //compare j to 2
-        B.NE default
-        LDUR X0, [SP, #16] //load C
-        ADD X11, XZR, XZR //reset i to 0
-        B loop
-        default:
-        //if j > 2, we are done with all the recursive calls and can exit the loop
+        //A12
+        LDUR X0, [SP, #40] //restore A
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #1 //quadrant 1 for A12
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for A12
+        STUR X8, [SP, #72] //save A12
 
-        ADD X14, XZR, XZR //set trace to 0
+        LDUR X0, [SP, #40] //restore A
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #2 //quadrant 2 for A21
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for A21
+        STUR X8, [SP, #80] //save A21
 
+        LDUR X0, [SP, #40] //restore A
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #3 //quadrant 3 for A22
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for A22
+        STUR X8, [SP, #88] //save A22
 
+        // B11, B12, B21, B22
+        LDUR X0, [SP, #48] //restore B  
+        LSL X1, X20, #1    // n = (n/2)*2
+        ADD X2, XZR, XZR //block number 0 for B11
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for B11
+        STUR X8, [SP, #96] //save B11
 
+        LDUR X0, [SP, #48] //restore B
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #1 //quadrant 1 for B12
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for B12
+        STUR X8, [SP, #104] //save B12
 
+        LDUR X0, [SP, #48] //restore B
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #2 //quadrant 2 for B21
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for B21
+        STUR X8, [SP, #112] //save B21
 
+        LDUR X0, [SP, #48] //restore B
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #3 //quadrant 3 for B22
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for B22
+        STUR X8, [SP, #120] //save B22
 
-        //reset the used registers for cleanliness
-//Again need to check where SP is actually pointing
-        LDUR X0, [SP, #0] //restore A
-        LDUR X1, [SP, #8] //restore B
-        LDUR X2, [SP, #16] //restore C
-        LDUR X3, [SP, #24] //restore n
-        LDUR X4, [SP, #32] //restore base
-        ADDI SP, SP, #32
+        // C11, C12, C21, C22
+        LDUR X0, [SP, #56] //restore C
+        LSL X1, X20, #1    // n = (n/2)*2
+        ADD X2, XZR, XZR //block number 0 for C11
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for C11
+        STUR X8, [SP, #128] //save C11
 
+        LDUR X0, [SP, #56] //restore C
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #1 //quadrant 1 for C12
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for C12
+        STUR X8, [SP, #136] //save C12
 
+        LDUR X0, [SP, #56] //restore C
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #2 //quadrant 2 for C21
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for C21
+        STUR X8, [SP, #144] //save C21
+
+        LDUR X0, [SP, #56] //restore C
+        LSL X1, X20, #1 // n = n/2 * 2 for the splitOffset function to work properly
+        ADDI X2, XZR, #3 //quadrant 3 for C22
+        ADD X3, XZR, X22 // stride
+        BL splitOffset //get the offset for C22
+        STUR X8, [SP, #152] //save C22
+
+        // 1 -recBlockMul(A11, B11, C11) 
+        LDUR X0, [SP, #64] //load A11
+        LDUR X1, [SP, #96] //load B11
+        LDUR X2, [SP, #128] //load C11
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+
+        // t+= recBlockMul(A12, B21, C11)
+        LDUR X0, [SP, #72] //load A12
+        LDUR X1, [SP, #112] //load B21
+        LDUR X2, [SP, #128] //load C11
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+        ADD X19, X19, X0 //add to trace
+
+        //recBlockMul(A11, B12, C12)
+        LDUR X0, [SP, #64] //load A11
+        LDUR X1, [SP, #104] //load B12
+        LDUR X2, [SP, #136] //load C12
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+
+        //recBlockMul(A12, B22, C12)
+        LDUR X0, [SP, #72] //load A12
+        LDUR X1, [SP, #120] //load B22
+        LDUR X2, [SP, #136] //load C12
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+
+        //recBlockMul(A21, B11, C21)
+        LDUR X0, [SP, #80] //load A21
+        LDUR X1, [SP, #96] //load B11
+        LDUR X2, [SP, #144] //load C21
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+
+        //recBlockMul(A21, B12, C22)
+        LDUR X0, [SP, #80] //load A21
+        LDUR X1, [SP, #104] //load B12
+        LDUR X2, [SP, #152] //load C22
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+
+        //t+= recBlockMul(A22, B22, C22)
+        LDUR X0, [SP, #88] //load A22
+        LDUR X1, [SP, #120] //load B22
+        LDUR X2, [SP, #152] //load C22
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+        ADD X19, X19, X0 //add to trace
+
+        // Restore LR and state, deallocate stack space, and return trace
+        ADD X0, XZR, X19 //move trace into X0 for return value
+        LDUR LR, [SP, #0] //restore LR
+        LDUR X19, [SP, #8] //restore trace
+        LDUR X20, [SP, #16] //restore n/2
+        LDUR X21, [SP, #24] //restore base
+        LDUR X22, [SP, #32] //restore stride
+        ADDI SP, SP, #160 //deallocate stack space
+        BR LR //return trace in X0
 
         //YOUR CODE ENDS HERE
-
-
-
-
 
 
 // ========================================================================================
