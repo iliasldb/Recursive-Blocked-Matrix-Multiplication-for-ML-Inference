@@ -428,6 +428,15 @@ recBlockMul:
         ADD X5, XZR, X22 // stride
         BL recBlockMul
 
+        //recBlockMul(A22, B21, C21)  
+        LDUR X0, [SP, #88]  //load A22
+        LDUR X1, [SP, #112] //load B21
+        LDUR X2, [SP, #144] //load C21
+        ADD X3, XZR, X20 // n/2
+        ADD X4, XZR, X21 // base
+        ADD X5, XZR, X22 // stride
+        BL recBlockMul
+
         //recBlockMul(A21, B12, C22)
         LDUR X0, [SP, #80] //load A21
         LDUR X1, [SP, #104] //load B12
